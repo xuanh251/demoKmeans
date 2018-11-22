@@ -8,6 +8,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using DevExpress.XtraEditors;
+using System.IO;
+using System.Data.OleDb;
+using Excel;
+using System.Diagnostics;
+//using Excel;
 
 namespace demoKmeans
 {
@@ -21,14 +26,13 @@ namespace demoKmeans
         int tt = 1;
         private List<Point> listCentral;
         private List<PhanCum> ListPhanCum;
+        int solanlap = 1;
         public FrmMain()
         {
             InitializeComponent();
             layoutControl1.Controls.Add(PnlMain);
             PnlMain.Dock = DockStyle.Fill;
-            PnlMain.Paint += panelControl1_Paint;
             PnlMain.MouseDown += panelControl1_MouseDown;
-            PnlMain.MouseUp += panelControl1_MouseUp;
             currentColor = Color.Black;
             bm = new Bitmap(PnlMain.Width, PnlMain.Height);
             grs = Graphics.FromImage(bm);
@@ -52,30 +56,92 @@ namespace demoKmeans
                 txtDSDiem.Text += item.Name + "(" + item.X + "," + item.Y + ")  ";
             }
         }
-
-        private void panelControl1_Paint(object sender, PaintEventArgs e)
-        {
-            Pen pen = new Pen(currentColor, 3);
-            e.Graphics.DrawEllipse(pen, myPoint.X, myPoint.Y, 3, 3);
-        }
-
-        private void panelControl1_MouseUp(object sender, MouseEventArgs e)
-        {
-           
-        }
         private String Number2String(int number, bool isCaps)
         {
             Char c = (Char)((isCaps ? 65 : 97) + (number - 1));
             return c.ToString();
         }
+        private void TaoPTTT(int k)
+        {
+            var rd = new Random();
+            listCentral = new List<Point>();
+            for (int i = 0; i < k; i++)
+            {
+                var rdPoint = rd.Next(listPoint.Count());
+                var p = new Point(listPoint.ElementAt(rdPoint).X, listPoint.ElementAt(rdPoint).Y);
+                listCentral.Add(p);
+            }
+        }
+        private float TinhKhoangCach(Point p1, Point p2)
+        {
+            float d = (float)Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
+            return d;
+        }
 
-        private void btnPhanCum_Click(object sender, EventArgs e)
+        private void btnLamLai_Click(object sender, EventArgs e)
+        {
+
+        }
+        private void RePaint()
+        {
+            bm = new Bitmap(PnlMain.Width, PnlMain.Height);
+            grs = Graphics.FromImage(bm);
+            PnlMain.Refresh();
+            PnlMain.BackgroundImage = (Bitmap)bm.Clone();
+        }
+
+        private void barButtonItem1_ItemClick(object sender, DevExpress.XtraBars.ItemClickEventArgs e)
+        {
+            using (OpenFileDialog ofd = new OpenFileDialog() { Filter = "File Excel|*.xls", ValidateNames = true })
+            {
+                if (ofd.ShowDialog() == DialogResult.OK)
+                {
+                    FileStream fs = new FileStream(ofd.FileName, FileMode.Open, FileAccess.Read);
+                    IExcelDataReader excelData = ExcelReaderFactory.CreateBinaryReader(fs);
+                    excelData.IsFirstRowAsColumnNames = true;
+                    DataSet rs = excelData.AsDataSet();
+                    foreach (DataTable table in rs.Tables)
+                    {
+                        foreach (DataRow row in table.Rows)
+                        {
+                            var a = new PointModel()
+                            {
+                                Name = Convert.ToString(row[0]),
+                                X = Convert.ToInt32(row[1]),
+                                Y = Convert.ToInt32(row[2]),
+                            };
+                            listPoint.Add(a);
+                        }
+                    }
+                }
+                foreach (var item in listPoint)
+                {
+                    txtDSDiem.Text += item.Name + "(" + item.X + ", " + item.Y + ") ";
+                }
+
+            }
+            foreach (var p in listPoint)
+            {
+                Pen pen = new Pen(currentColor, 3);
+                grs.DrawEllipse(pen, p.X, p.Y, 3, 3);
+                PnlMain.BackgroundImage = (Bitmap)bm.Clone();
+                PnlMain.Refresh();
+                //txtKetQua.Text += p.Name + "(" + listPoint.FirstOrDefault(s => s.Name == p.Name).X + ", " + listPoint.FirstOrDefault(s => s.Name == p.Name).Y + "), ";
+            }
+        }
+
+        private void btnPhanCum_ItemClick(object sender, DevExpress.XtraBars.ItemClickEventArgs e)
         {
             var end = false;
             try
             {
+                if (string.IsNullOrEmpty(txtSoCum.Text.ToString()))
+                {
+                    XtraMessageBox.Show("Bạn chưa nhập số cụm k!", "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
                 var k = int.Parse(txtSoCum.Text);
-                int solanlap = 1;
+
                 TaoPTTT(k);//khởi tạo ngẫu nhiên danh sách phần tử trung tâm
                 while (!end && solanlap < 100)
                 {
@@ -153,40 +219,57 @@ namespace demoKmeans
             {
                 XtraMessageBox.Show("Đã xảy ra lỗi" + Environment.NewLine + ex.ToString(), "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-
-        }
-        private void TaoPTTT(int k)
-        {
-            var rd = new Random();
-            listCentral = new List<Point>();
-            for (int i = 0; i < k; i++)
-            {
-                var rdPoint = rd.Next(listPoint.Count());
-                var p = new Point(listPoint.ElementAt(rdPoint).X, listPoint.ElementAt(rdPoint).Y);
-                listCentral.Add(p);
-            }
-        }
-        private float TinhKhoangCach(Point p1, Point p2)
-        {
-            float d = (float)Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
-            return d;
         }
 
-        private void btnLamLai_Click(object sender, EventArgs e)
+        private void btnLamLai_ItemClick(object sender, DevExpress.XtraBars.ItemClickEventArgs e)
         {
             RePaint();
+            currentColor = Color.Black;
             txtDSDiem.ResetText();
             txtSoCum.ResetText();
             txtKetQua.ResetText();
             listPoint = new List<PointModel>();
             tt = 1;
+            solanlap = 1;
         }
-        private void RePaint()
+
+        private void btnLuuKetQua_ItemClick(object sender, DevExpress.XtraBars.ItemClickEventArgs e)
         {
-            bm = new Bitmap(PnlMain.Width, PnlMain.Height);
-            grs = Graphics.FromImage(bm);
-            PnlMain.Refresh();
-            PnlMain.BackgroundImage = (Bitmap)bm.Clone();
+            string path = string.Empty;
+            if (string.IsNullOrEmpty(txtDSDiem.Text) || string.IsNullOrEmpty(txtSoCum.Text) || string.IsNullOrEmpty(txtKetQua.Text))
+            {
+                XtraMessageBox.Show("Không có gì để lưu", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            SaveFileDialog sfd = new SaveFileDialog();
+            sfd.Filter = "TextFile|*.txt";
+            string content = string.Empty;
+            sfd.FileName = DateTime.Now.ToString("yyyyMMdd_HHmmss") + "KmeansResult";
+            var dl = sfd.ShowDialog();
+            if (dl == DialogResult.OK)
+            {
+                path = sfd.FileName;
+                content += "Ngày tạo: " + DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss") + Environment.NewLine + "------------------------------------------------------" + Environment.NewLine;
+                content += "Dữ liệu ban đầu có " + listPoint.Count + " điểm: " + txtDSDiem.Text + Environment.NewLine;
+                content += "Số cụm: " + txtSoCum.Text + Environment.NewLine;
+                content += "------------------------------------" + Environment.NewLine + "Kết quả:" + Environment.NewLine;
+                content += txtKetQua.Text;
+                StreamWriter sw = new StreamWriter(File.Create(sfd.FileName));
+                sw.Write(content);
+                sw.Dispose();
+                if (XtraMessageBox.Show("Đã lưu file!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information) == DialogResult.OK)
+                {
+                    if (File.Exists(path))
+                    {
+                        Process.Start(path);
+                    }
+                };
+
+            }
+            else
+            {
+                XtraMessageBox.Show("Chưa lưu được!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
     }
 }
