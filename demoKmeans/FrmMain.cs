@@ -26,6 +26,7 @@ namespace demoKmeans
         int tt = 1;
         private List<Point> listCentral;
         private List<PhanCum> ListPhanCum;
+        private List<Point> listCumBanDau;
         int solanlap = 1;
         public FrmMain()
         {
@@ -71,6 +72,7 @@ namespace demoKmeans
                 var p = new Point(listPoint.ElementAt(rdPoint).X, listPoint.ElementAt(rdPoint).Y);
                 listCentral.Add(p);
             }
+            listCumBanDau = listCentral;
         }
         private float TinhKhoangCach(Point p1, Point p2)
         {
@@ -114,22 +116,16 @@ namespace demoKmeans
                         }
                     }
                 }
-                foreach (var item in listPoint)
+                foreach (var p in listPoint)
                 {
-                    txtDSDiem.Text += item.Name + "(" + item.X + ", " + item.Y + ") ";
+                    txtDSDiem.Text += p.Name + "(" + p.X + ", " + p.Y + ") ";
+                    Pen pen = new Pen(currentColor, 3);
+                    grs.DrawEllipse(pen, p.X, p.Y, 3, 3);
+                    PnlMain.BackgroundImage = (Bitmap)bm.Clone();
+                    PnlMain.Refresh();
                 }
-
-            }
-            foreach (var p in listPoint)
-            {
-                Pen pen = new Pen(currentColor, 3);
-                grs.DrawEllipse(pen, p.X, p.Y, 3, 3);
-                PnlMain.BackgroundImage = (Bitmap)bm.Clone();
-                PnlMain.Refresh();
-                //txtKetQua.Text += p.Name + "(" + listPoint.FirstOrDefault(s => s.Name == p.Name).X + ", " + listPoint.FirstOrDefault(s => s.Name == p.Name).Y + "), ";
             }
         }
-
         private void btnPhanCum_ItemClick(object sender, DevExpress.XtraBars.ItemClickEventArgs e)
         {
             var end = false;
@@ -160,7 +156,7 @@ namespace demoKmeans
                                 dMin = d;
                                 thuocPttt = c;
                             }
-                        }//chia thêm các điểm vào các cụm tương ứng
+                        }//chia các điểm vào các cụm tương ứng
                         ListPhanCum.Add(new PhanCum()
                         {
                             KhoangCach = dMin,
@@ -251,8 +247,13 @@ namespace demoKmeans
                 path = sfd.FileName;
                 content += "Ngày tạo: " + DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss") + Environment.NewLine + "------------------------------------------------------" + Environment.NewLine;
                 content += "Dữ liệu ban đầu có " + listPoint.Count + " điểm: " + txtDSDiem.Text + Environment.NewLine;
-                content += "Số cụm: " + txtSoCum.Text + Environment.NewLine;
-                content += "------------------------------------" + Environment.NewLine + "Kết quả:" + Environment.NewLine;
+                content += "Danh sách phần tử trung tâm ban đầu: " + txtSoCum.Text + " cụm" + Environment.NewLine;
+                int i = 1;
+                foreach (var cum in listCumBanDau)
+                {
+                    content += "Cụm " + i++ + ": (" + cum.X + ", " + cum.Y + ")" + Environment.NewLine;
+                }
+                content += "---------------------///Kết quả ///------------------" + Environment.NewLine;
                 content += txtKetQua.Text;
                 StreamWriter sw = new StreamWriter(File.Create(sfd.FileName));
                 sw.Write(content);
@@ -264,7 +265,6 @@ namespace demoKmeans
                         Process.Start(path);
                     }
                 };
-
             }
             else
             {
